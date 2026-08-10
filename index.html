@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CTX AV Field Tools</title>
+<style>
+  :root {
+    --ink: #1c2024;
+    --ink-soft: #5a6270;
+    --panel: #ffffff;
+    --bg: #eef1f4;
+    --line: #d7dce2;
+    --accent: #2b6f5c;
+    --accent-dark: #1e4f41;
+    --warn: #b5501f;
+    --mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    --sans: 'IBM Plex Sans', 'Segoe UI', Roboto, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    font-family: var(--sans);
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+
+  .sheet {
+    width: 100%;
+    max-width: 640px;
+  }
+
+  .letterhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 12px;
+    margin-bottom: 20px;
+  }
+
+  .letterhead .title {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .letterhead .tag {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  nav.tools {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    font-family: var(--mono);
+    font-size: 11px;
+  }
+  nav.tools button {
+    color: var(--ink-soft);
+    text-decoration: none;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: #fff;
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  nav.tools button.current {
+    color: var(--accent-dark);
+    border-color: var(--accent);
+    background: #f4faf8;
+  }
+
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .sub {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 0 0 28px;
+    line-height: 1.5;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(28,32,36,0.04);
+    padding: 28px;
+  }
+
+  .field { margin-bottom: 20px; }
+  .field:last-of-type { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+
+  select, input[type="number"] {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 15px;
+    font-family: var(--mono);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: #fbfcfd;
+    color: var(--ink);
+    transition: border-color 0.15s ease;
+  }
+
+  select:focus, input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .wire-row {
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 18px 18px 6px;
+    margin-bottom: 14px;
+    background: #fbfcfd;
+    position: relative;
+  }
+
+  .wire-row .row-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  .wire-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  .remove-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    background: none;
+    border: none;
+    color: var(--ink-soft);
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+  .remove-btn:hover { color: var(--warn); }
+
+  .add-row-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 4px;
+    background: #fff;
+    border: 1px dashed var(--line);
+    border-radius: 3px;
+    color: var(--accent);
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .add-row-btn:hover { border-color: var(--accent); background: #f4faf8; }
+
+  .result {
+    margin-top: 26px;
+    border-top: 1px dashed var(--line);
+    padding-top: 22px;
+  }
+
+  .result-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 9px 0;
+    border-bottom: 1px solid #f0f2f4;
+  }
+  .result-line:last-child { border-bottom: none; }
+
+  .result-line .k {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+  }
+
+  .result-line .v {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  .headline-result {
+    background: var(--accent-dark);
+    color: #f4f7f5;
+    border-radius: 3px;
+    padding: 20px;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .headline-result.warn { background: var(--warn); }
+
+  .headline-result .k {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+
+  .headline-result .v {
+    font-family: var(--mono);
+    font-size: 30px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .headline-result .v span {
+    font-size: 14px;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+
+  .formula-note {
+    margin-top: 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: #f6f7f8;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 12px 14px;
+    line-height: 1.6;
+  }
+  .formula-note b { color: var(--ink); }
+
+  footer {
+    margin-top: 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  .view { display: none; }
+  .view.active { display: block; }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="letterhead">
+    <div class="title">CTX AV Consulting</div>
+    <div class="tag">field tools</div>
+  </div>
+
+  <nav class="tools">
+    <button type="button" id="navAmp" class="current">70V Calculator</button>
+    <button type="button" id="navConduit">Conduit Fill</button>
+  </nav>
+
+  <!-- ===================== AMP WATTAGE VIEW ===================== -->
+  <div class="view active" id="viewAmp">
+    <h1>Amplifier Channel Load Calculator</h1>
+    <p class="sub">Constant-voltage (70V / 100V) systems are additive — total channel wattage is simply the tap setting times the number of speakers on that tap. This calculates required amplifier channel wattage from a single tap group, plus recommended headroom sizing.</p>
+
+    <div class="panel">
+      <div class="row">
+        <div class="field">
+          <label for="voltage">Line Voltage</label>
+          <select id="voltage">
+            <option value="70">70V</option>
+            <option value="100">100V</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="qty">Quantity of Speakers</label>
+          <input type="number" id="qty" min="0" step="1" placeholder="e.g. 8">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="tap">Tap Wattage per Speaker (W)</label>
+        <input type="number" id="tap" min="0" step="0.1" placeholder="e.g. 4">
+      </div>
+
+      <div class="result">
+        <div class="headline-result">
+          <div class="k">Required Amplifier Channel Wattage</div>
+          <div class="v" id="totalWatts">0 <span>W</span></div>
+        </div>
+
+        <div class="result-line">
+          <div class="k">Recommended Amp Rating (+20% headroom)</div>
+          <div class="v" id="headroomWatts">0 W</div>
+        </div>
+        <div class="result-line">
+          <div class="k">Line Voltage</div>
+          <div class="v" id="echoVoltage">70V</div>
+        </div>
+      </div>
+
+      <div class="formula-note">
+        <b>Formula:</b> Total Wattage = Tap Wattage &times; Quantity of Speakers<br>
+        Constant-voltage (70V/100V) taps are power-additive regardless of line voltage — impedance is not part of the load calculation. Recommended amp rating adds 20% headroom, per standard industry practice, to avoid running the channel at full rated output.
+      </div>
+    </div>
+
+    <footer>Run multiple tap groups separately, then sum totals per amplifier channel.</footer>
+  </div>
+
+  <!-- ===================== CONDUIT FILL VIEW ===================== -->
+  <div class="view" id="viewConduit">
+    <h1>EMT Conduit Fill Calculator</h1>
+    <p class="sub">Per NEC Chapter 9, Table 1: 1 conductor may fill 53% of a raceway, 2 conductors 31%, and 3 or more conductors 40%. Select a wire type below (diameter auto-fills) or enter a custom diameter, add a row per wire size in the run, and this returns the minimum EMT trade size.</p>
+
+    <div class="panel">
+      <div id="wireRows"></div>
+
+      <button type="button" class="add-row-btn" id="addRowBtn">+ Add Another Wire Size</button>
+
+      <div class="result">
+        <div class="headline-result" id="headlineResult">
+          <div class="k">Minimum EMT Trade Size</div>
+          <div class="v" id="conduitSize">—</div>
+        </div>
+
+        <div class="result-line">
+          <div class="k">Total Conductors</div>
+          <div class="v" id="totalConductors">0</div>
+        </div>
+        <div class="result-line">
+          <div class="k">NEC Fill Limit Applied</div>
+          <div class="v" id="fillPercentUsed">—</div>
+        </div>
+        <div class="result-line">
+          <div class="k">Total Conductor Area</div>
+          <div class="v" id="totalArea">0.000 in²</div>
+        </div>
+        <div class="result-line">
+          <div class="k">Actual Fill at Selected Size</div>
+          <div class="v" id="actualFill">—</div>
+        </div>
+      </div>
+
+      <div class="formula-note">
+        <b>Formula:</b> Conductor Area = &pi; &times; (Diameter &divide; 2)&sup2; per wire, summed across all wires and quantities.<br>
+        Minimum conduit = smallest EMT trade size whose Table 4 area at the applicable fill % (53/31/40) is &ge; total conductor area.<br>
+        Wire diameters in the dropdown are nominal/approximate OD figures — verify against the actual manufacturer spec sheet for critical or high-fill runs.
+      </div>
+    </div>
+
+    <footer>Values reference NEC 2023 Chapter 9, Tables 1 &amp; 4 (EMT). Always verify against the code edition adopted by your local AHJ.</footer>
+  </div>
+
+</div>
+
+<script>
+  /* ---------- NAV SWITCHING ---------- */
+  const navAmp = document.getElementById('navAmp');
+  const navConduit = document.getElementById('navConduit');
+  const viewAmp = document.getElementById('viewAmp');
+  const viewConduit = document.getElementById('viewConduit');
+
+  navAmp.addEventListener('click', () => {
+    viewAmp.classList.add('active');
+    viewConduit.classList.remove('active');
+    navAmp.classList.add('current');
+    navConduit.classList.remove('current');
+  });
+  navConduit.addEventListener('click', () => {
+    viewConduit.classList.add('active');
+    viewAmp.classList.remove('active');
+    navConduit.classList.add('current');
+    navAmp.classList.remove('current');
+  });
+
+  /* ---------- AMP WATTAGE CALCULATOR ---------- */
+  const voltageEl = document.getElementById('voltage');
+  const qtyEl = document.getElementById('qty');
+  const tapEl = document.getElementById('tap');
+  const totalWattsEl = document.getElementById('totalWatts');
+  const headroomWattsEl = document.getElementById('headroomWatts');
+  const echoVoltageEl = document.getElementById('echoVoltage');
+
+  function formatWatts(n) {
+    if (!isFinite(n)) return '0';
+    return n % 1 === 0 ? n.toString() : n.toFixed(1);
+  }
+
+  function calculateAmp() {
+    const qty = parseFloat(qtyEl.value) || 0;
+    const tap = parseFloat(tapEl.value) || 0;
+    const total = qty * tap;
+    const headroom = total * 1.2;
+
+    totalWattsEl.innerHTML = formatWatts(total) + ' <span>W</span>';
+    headroomWattsEl.textContent = formatWatts(headroom) + ' W';
+    echoVoltageEl.textContent = voltageEl.value + 'V';
+  }
+
+  [voltageEl, qtyEl, tapEl].forEach(el => el.addEventListener('input', calculateAmp));
+  voltageEl.addEventListener('change', calculateAmp);
+  calculateAmp();
+
+  /* ---------- CONDUIT FILL CALCULATOR ---------- */
+  // Wire presets — nominal outer diameter in inches (approximate, verify against spec sheets)
+  // group: null = top-level placeholder/custom, "common" = CTX common stock (West Penn), "generic" = generic cable types
+  const WIRE_PRESETS = [
+    { label: "Select wire type…", diameter: null, group: null },
+
+    { label: "West Penn 227", diameter: 0.264, group: "common" },
+    { label: "West Penn 226", diameter: 0.23, group: "common" },
+    { label: "West Penn 225", diameter: 0.182, group: "common" },
+    { label: "West Penn 454", diameter: 0.135, group: "common" },
+    { label: "West Penn D2401", diameter: 0.16, group: "common" },
+    { label: "West Penn 4246", diameter: 0.22, group: "common" },
+    { label: "West Penn 4236F", diameter: 0.275, group: "common" },
+    { label: "West Penn 254246", diameter: 0.225, group: "common" },
+    { label: "West Penn 254236F", diameter: 0.255, group: "common" },
+    { label: "West Penn 6350", diameter: 0.275, group: "common" },
+    { label: "West Penn 807X", diameter: 0.242, group: "common" },
+
+    { label: "Cat5e (UTP, 24 AWG)", diameter: 0.19, group: "generic" },
+    { label: "Cat6 (UTP, 23 AWG)", diameter: 0.23, group: "generic" },
+    { label: "Cat6a (F/UTP, shielded)", diameter: 0.27, group: "generic" },
+    { label: "Cat6a (UTP, unshielded)", diameter: 0.30, group: "generic" },
+    { label: "RG6 Coax", diameter: 0.27, group: "generic" },
+    { label: "RG59 Coax", diameter: 0.24, group: "generic" },
+    { label: "Speaker Wire 18/2", diameter: 0.16, group: "generic" },
+    { label: "Speaker Wire 16/2", diameter: 0.19, group: "generic" },
+    { label: "Speaker Wire 16/4", diameter: 0.28, group: "generic" },
+    { label: "Speaker Wire 14/2", diameter: 0.20, group: "generic" },
+    { label: "Speaker Wire 12/2", diameter: 0.25, group: "generic" },
+    { label: "2-Cond Shielded Mic/Control (18 AWG)", diameter: 0.20, group: "generic" },
+    { label: "THHN 14 AWG (building wire)", diameter: 0.111, group: "generic" },
+    { label: "THHN 12 AWG (building wire)", diameter: 0.130, group: "generic" },
+    { label: "THHN 10 AWG (building wire)", diameter: 0.164, group: "generic" },
+
+    { label: "Custom — enter diameter manually", diameter: null, group: null }
+  ];
+
+  // NEC Chapter 9, Table 4 — EMT total internal area (100%), sq in
+  const EMT_SIZES = [
+    { label: '1/2"',   area: 0.304 },
+    { label: '3/4"',   area: 0.533 },
+    { label: '1"',     area: 0.864 },
+    { label: '1-1/4"', area: 1.496 },
+    { label: '1-1/2"', area: 2.036 },
+    { label: '2"',     area: 3.356 },
+    { label: '2-1/2"', area: 5.858 },
+    { label: '3"',     area: 8.846 },
+    { label: '3-1/2"', area: 11.545 },
+    { label: '4"',     area: 14.753 }
+  ];
+
+  const wireRowsEl = document.getElementById('wireRows');
+  const addRowBtn = document.getElementById('addRowBtn');
+  let rowCount = 0;
+
+  function buildPresetOptions() {
+    let html = '';
+    let openGroup = null;
+
+    WIRE_PRESETS.forEach((w, i) => {
+      const groupTitle = w.group === 'common' ? 'Common — West Penn'
+        : w.group === 'generic' ? 'Generic'
+        : null;
+
+      if (groupTitle !== openGroup) {
+        if (openGroup) html += `</optgroup>`;
+        if (groupTitle) html += `<optgroup label="${groupTitle}">`;
+        openGroup = groupTitle;
+      }
+
+      html += `<option value="${i}">${w.label}</option>`;
+    });
+
+    if (openGroup) html += `</optgroup>`;
+    return html;
+  }
+
+  function addWireRow() {
+    rowCount++;
+    const rowId = 'row_' + rowCount;
+    const row = document.createElement('div');
+    row.className = 'wire-row';
+    row.id = rowId;
+    row.innerHTML = `
+      <div class="row-label">Wire Size ${rowCount}</div>
+      <button type="button" class="remove-btn" data-row="${rowId}">remove</button>
+      <div class="wire-grid">
+        <div class="field">
+          <label>Wire Type</label>
+          <select class="wire-preset">${buildPresetOptions()}</select>
+        </div>
+        <div class="field">
+          <label>Diameter (in)</label>
+          <input type="number" class="wire-diameter" min="0" step="0.001" placeholder="e.g. 0.23">
+        </div>
+        <div class="field">
+          <label>Quantity</label>
+          <input type="number" class="wire-qty" min="0" step="1" placeholder="e.g. 6">
+        </div>
+      </div>
+    `;
+    wireRowsEl.appendChild(row);
+
+    const presetSelect = row.querySelector('.wire-preset');
+    const diameterInput = row.querySelector('.wire-diameter');
+    const qtyInput = row.querySelector('.wire-qty');
+
+    presetSelect.addEventListener('change', () => {
+      const preset = WIRE_PRESETS[parseInt(presetSelect.value, 10)];
+      if (preset && preset.diameter !== null) {
+        diameterInput.value = preset.diameter;
+      }
+      calculateConduit();
+    });
+    diameterInput.addEventListener('input', calculateConduit);
+    qtyInput.addEventListener('input', calculateConduit);
+
+    row.querySelector('.remove-btn').addEventListener('click', () => {
+      document.getElementById(rowId).remove();
+      calculateConduit();
+    });
+
+    calculateConduit();
+  }
+
+  addRowBtn.addEventListener('click', addWireRow);
+
+  function calculateConduit() {
+    const rows = wireRowsEl.querySelectorAll('.wire-row');
+    let totalArea = 0;
+    let totalConductors = 0;
+
+    rows.forEach(row => {
+      const diameter = parseFloat(row.querySelector('.wire-diameter').value) || 0;
+      const qty = parseFloat(row.querySelector('.wire-qty').value) || 0;
+      const singleArea = Math.PI * Math.pow(diameter / 2, 2);
+      totalArea += singleArea * qty;
+      totalConductors += qty;
+    });
+
+    let fillFraction, fillLabel;
+    if (totalConductors <= 0) {
+      fillFraction = 0.40;
+      fillLabel = '—';
+    } else if (totalConductors === 1) {
+      fillFraction = 0.53;
+      fillLabel = '53% (1 conductor)';
+    } else if (totalConductors === 2) {
+      fillFraction = 0.31;
+      fillLabel = '31% (2 conductors)';
+    } else {
+      fillFraction = 0.40;
+      fillLabel = '40% (3+ conductors)';
+    }
+
+    let selectedSize = null;
+    for (const size of EMT_SIZES) {
+      const allowedArea = size.area * fillFraction;
+      if (allowedArea >= totalArea && totalArea > 0) {
+        selectedSize = size;
+        break;
+      }
+    }
+
+    const headline = document.getElementById('headlineResult');
+    const conduitSizeEl = document.getElementById('conduitSize');
+    const actualFillEl = document.getElementById('actualFill');
+
+    if (totalArea <= 0 || totalConductors <= 0) {
+      conduitSizeEl.innerHTML = '—';
+      actualFillEl.textContent = '—';
+      headline.classList.remove('warn');
+    } else if (selectedSize) {
+      conduitSizeEl.innerHTML = selectedSize.label + ' <span>EMT</span>';
+      const actualPct = (totalArea / selectedSize.area) * 100;
+      actualFillEl.textContent = actualPct.toFixed(1) + '%';
+      headline.classList.remove('warn');
+    } else {
+      conduitSizeEl.innerHTML = 'Exceeds 4" <span>EMT</span>';
+      actualFillEl.textContent = 'Use multiple conduits';
+      headline.classList.add('warn');
+    }
+
+    document.getElementById('totalConductors').textContent = totalConductors;
+    document.getElementById('fillPercentUsed').textContent = fillLabel;
+    document.getElementById('totalArea').textContent = totalArea.toFixed(4) + ' in²';
+  }
+
+  // Start with two rows
+  addWireRow();
+  addWireRow();
+</script>
+
+</body>
+</html>
