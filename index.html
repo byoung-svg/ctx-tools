@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Constant-Voltage Amplifier Load Calculator</title>
+<style>
+  :root {
+    --ink: #1c2024;
+    --ink-soft: #5a6270;
+    --panel: #ffffff;
+    --bg: #eef1f4;
+    --line: #d7dce2;
+    --accent: #2b6f5c;
+    --accent-dark: #1e4f41;
+    --warn: #b5501f;
+    --mono: 'IBM Plex Mono', 'SF Mono', Consolas, monospace;
+    --sans: 'IBM Plex Sans', 'Segoe UI', Roboto, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 28px 28px;
+    font-family: var(--sans);
+    color: var(--ink);
+    display: flex;
+    justify-content: center;
+    padding: 40px 20px;
+    min-height: 100vh;
+  }
+
+  .sheet {
+    width: 100%;
+    max-width: 560px;
+  }
+
+  .letterhead {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 12px;
+    margin-bottom: 28px;
+  }
+
+  .letterhead .title {
+    font-family: var(--mono);
+    font-size: 13px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .letterhead .tag {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+  }
+
+  h1 {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+
+  .sub {
+    font-size: 14px;
+    color: var(--ink-soft);
+    margin: 0 0 28px;
+    line-height: 1.5;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    box-shadow: 0 1px 2px rgba(28,32,36,0.04);
+    padding: 28px;
+  }
+
+  .field {
+    margin-bottom: 20px;
+  }
+
+  .field:last-of-type { margin-bottom: 0; }
+
+  label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+
+  select, input[type="number"] {
+    width: 100%;
+    padding: 12px 14px;
+    font-size: 16px;
+    font-family: var(--mono);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    background: #fbfcfd;
+    color: var(--ink);
+    transition: border-color 0.15s ease;
+  }
+
+  select:focus, input[type="number"]:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: #fff;
+  }
+
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .result {
+    margin-top: 26px;
+    border-top: 1px dashed var(--line);
+    padding-top: 22px;
+  }
+
+  .result-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+  }
+
+  .result-line .k {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-soft);
+  }
+
+  .result-line .v {
+    font-family: var(--mono);
+    font-size: 15px;
+    color: var(--ink);
+  }
+
+  .headline-result {
+    background: var(--accent-dark);
+    color: #f4f7f5;
+    border-radius: 3px;
+    padding: 20px;
+    margin-top: 4px;
+    text-align: center;
+  }
+
+  .headline-result .k {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    opacity: 0.75;
+    margin-bottom: 6px;
+  }
+
+  .headline-result .v {
+    font-family: var(--mono);
+    font-size: 34px;
+    font-weight: 600;
+    line-height: 1;
+  }
+
+  .headline-result .v span {
+    font-size: 16px;
+    font-weight: 400;
+    opacity: 0.8;
+  }
+
+  .formula-note {
+    margin-top: 22px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    background: #f6f7f8;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 12px 14px;
+    line-height: 1.6;
+  }
+
+  .formula-note b { color: var(--ink); }
+
+  footer {
+    margin-top: 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="letterhead">
+    <div class="title">CTX AV Consulting</div>
+    <div class="tag">field tool</div>
+  </div>
+
+  <h1>Amplifier Channel Load Calculator</h1>
+  <p class="sub">Constant-voltage (70V / 100V) systems are additive — total channel wattage is simply the tap setting times the number of speakers on that tap. This calculates required amplifier channel wattage from a single tap group, plus recommended headroom sizing.</p>
+
+  <div class="panel">
+
+    <div class="row">
+      <div class="field">
+        <label for="voltage">Line Voltage</label>
+        <select id="voltage">
+          <option value="70">70V</option>
+          <option value="100">100V</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="qty">Quantity of Speakers</label>
+        <input type="number" id="qty" min="0" step="1" placeholder="e.g. 8">
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="tap">Tap Wattage per Speaker (W)</label>
+      <input type="number" id="tap" min="0" step="0.1" placeholder="e.g. 4">
+    </div>
+
+    <div class="result">
+      <div class="headline-result">
+        <div class="k">Required Amplifier Channel Wattage</div>
+        <div class="v" id="totalWatts">0 <span>W</span></div>
+      </div>
+
+      <div class="result-line">
+        <div class="k">Recommended Amp Rating (+20% headroom)</div>
+        <div class="v" id="headroomWatts">0 W</div>
+      </div>
+      <div class="result-line">
+        <div class="k">Line Voltage</div>
+        <div class="v" id="echoVoltage">70V</div>
+      </div>
+    </div>
+
+    <div class="formula-note">
+      <b>Formula:</b> Total Wattage = Tap Wattage &times; Quantity of Speakers<br>
+      Constant-voltage (70V/100V) taps are power-additive regardless of line voltage — impedance is not part of the load calculation. Recommended amp rating adds 20% headroom, per standard industry practice, to avoid running the channel at full rated output.
+    </div>
+
+  </div>
+
+  <footer>Run multiple tap groups separately, then sum totals per amplifier channel.</footer>
+</div>
+
+<script>
+  const voltageEl = document.getElementById('voltage');
+  const qtyEl = document.getElementById('qty');
+  const tapEl = document.getElementById('tap');
+  const totalWattsEl = document.getElementById('totalWatts');
+  const headroomWattsEl = document.getElementById('headroomWatts');
+  const echoVoltageEl = document.getElementById('echoVoltage');
+
+  function formatWatts(n) {
+    if (!isFinite(n)) return '0';
+    return n % 1 === 0 ? n.toString() : n.toFixed(1);
+  }
+
+  function calculate() {
+    const qty = parseFloat(qtyEl.value) || 0;
+    const tap = parseFloat(tapEl.value) || 0;
+    const total = qty * tap;
+    const headroom = total * 1.2;
+
+    totalWattsEl.innerHTML = formatWatts(total) + ' <span>W</span>';
+    headroomWattsEl.textContent = formatWatts(headroom) + ' W';
+    echoVoltageEl.textContent = voltageEl.value + 'V';
+  }
+
+  [voltageEl, qtyEl, tapEl].forEach(el => el.addEventListener('input', calculate));
+  voltageEl.addEventListener('change', calculate);
+  calculate();
+</script>
+
+</body>
+</html>
