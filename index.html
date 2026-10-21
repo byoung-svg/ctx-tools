@@ -286,6 +286,87 @@
     text-align: center;
   }
 
+  .headline-result .note {
+    margin-top: 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.5;
+    opacity: 0.8;
+  }
+
+  nav.tools { flex-wrap: wrap; }
+
+  /* ---- Coverage tool: diagram stage, stats, sliders ---- */
+  .stage {
+    background: #0a1119;
+    border: 1px solid #1b2733;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .stage svg { display: block; width: 100%; height: auto; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    text-align: center;
+    padding: 18px 0;
+    margin-bottom: 22px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .stats .k {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .stats .v {
+    font-family: var(--mono);
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--ink);
+  }
+  .stats .v.hl { color: var(--accent); }
+
+  .slider-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  .slider-grid > div {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+  .slider-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .slider-head label { margin-bottom: 0; }
+  .slider-head .val {
+    font-family: var(--mono);
+    font-size: 14px;
+    color: var(--ink);
+    white-space: nowrap;
+  }
+  input[type="range"] { width: 100%; accent-color: var(--accent); }
+
+  .warn-line {
+    display: none;
+    margin-top: 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--warn);
+  }
+
+  @media (max-width: 560px) {
+    .slider-grid { grid-template-columns: 1fr; }
+  }
+
   .view { display: none; }
   .view.active { display: block; }
 </style>
@@ -301,6 +382,7 @@
   <nav class="tools">
     <button type="button" id="navAmp" class="current">70V Calculator</button>
     <button type="button" id="navConduit">Conduit Fill</button>
+    <button type="button" id="navCoverage">70v Coverage Calculator</button>
   </nav>
 
   <!-- ===================== AMP WATTAGE VIEW ===================== -->
@@ -353,6 +435,69 @@
     <footer>Run multiple tap groups separately, then sum totals per amplifier channel.</footer>
   </div>
 
+  <!-- ===================== SPEAKER COVERAGE VIEW ===================== -->
+  <div class="view" id="viewCoverage">
+    <h1>70v Speaker Coverage Calculator</h1>
+    <p class="sub">Conical dispersion, imperial units. Adjust the sliders to see the coverage footprint at ear level.</p>
+
+    <div class="panel">
+      <div class="stage">
+        <svg id="coverageSvg" viewBox="0 0 640 340" role="img" aria-label="Speaker coverage diagram"></svg>
+      </div>
+
+      <div class="stats">
+        <div>
+          <div class="k">Coverage Diam.</div>
+          <div class="v hl" id="statDiameter">0.0 ft</div>
+        </div>
+        <div>
+          <div class="k">Coverage Area</div>
+          <div class="v" id="statArea">0 sq ft</div>
+        </div>
+        <div>
+          <div class="k">Net Throw Dist.</div>
+          <div class="v" id="statThrow">0.0 ft</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="variance">Target Coverage Uniformity (Max Allowed Variance)</label>
+        <select id="variance">
+          <option value="none">Strict Uniformity (Minimal Edge Drop / High Overlap)</option>
+          <option value="3">High Fidelity Edge Target (&plusmn;3 dB Standard Boundary)</option>
+          <option value="6" selected>Standard Background Music (&plusmn;6 dB Soft Overlap)</option>
+          <option value="12">Maximum Permissible Bleed (&plusmn;12 dB Commercial Minimum)</option>
+        </select>
+      </div>
+
+      <div class="slider-grid">
+        <div>
+          <div class="slider-head">
+            <label for="mountHeight">Speaker Height</label>
+            <span class="val" id="mountVal">10.5 ft</span>
+          </div>
+          <input type="range" id="mountHeight" min="6" max="30" step="0.5" value="10.5">
+        </div>
+        <div>
+          <div class="slider-head">
+            <label for="listenerHeight">Listener Height (Ears)</label>
+            <span class="val" id="listenerVal">6.0 ft</span>
+          </div>
+          <input type="range" id="listenerHeight" min="2" max="8" step="0.5" value="6">
+        </div>
+        <div>
+          <div class="slider-head">
+            <label for="dispersion">Dispersion Angle</label>
+            <span class="val" id="dispersionVal">120&deg;</span>
+          </div>
+          <input type="range" id="dispersion" min="90" max="140" step="1" value="120">
+        </div>
+      </div>
+
+      <div class="warn-line" id="coverageWarn"></div>
+    </div>
+  </div>
+
   <!-- ===================== CONDUIT FILL VIEW ===================== -->
   <div class="view" id="viewConduit">
     <h1>EMT Conduit Fill Calculator</h1>
@@ -401,22 +546,19 @@
 
 <script>
   /* ---------- NAV SWITCHING ---------- */
-  const navAmp = document.getElementById('navAmp');
-  const navConduit = document.getElementById('navConduit');
-  const viewAmp = document.getElementById('viewAmp');
-  const viewConduit = document.getElementById('viewConduit');
+  const NAV_TABS = [
+    { btn: 'navAmp',      view: 'viewAmp' },
+    { btn: 'navConduit',  view: 'viewConduit' },
+    { btn: 'navCoverage', view: 'viewCoverage' }
+  ];
 
-  navAmp.addEventListener('click', () => {
-    viewAmp.classList.add('active');
-    viewConduit.classList.remove('active');
-    navAmp.classList.add('current');
-    navConduit.classList.remove('current');
-  });
-  navConduit.addEventListener('click', () => {
-    viewConduit.classList.add('active');
-    viewAmp.classList.remove('active');
-    navConduit.classList.add('current');
-    navAmp.classList.remove('current');
+  NAV_TABS.forEach(tab => {
+    document.getElementById(tab.btn).addEventListener('click', () => {
+      NAV_TABS.forEach(t => {
+        document.getElementById(t.btn).classList.toggle('current', t === tab);
+        document.getElementById(t.view).classList.toggle('active', t === tab);
+      });
+    });
   });
 
   /* ---------- AMP WATTAGE CALCULATOR ---------- */
@@ -446,6 +588,109 @@
   [voltageEl, qtyEl, tapEl].forEach(el => el.addEventListener('input', calculateAmp));
   voltageEl.addEventListener('change', calculateAmp);
   calculateAmp();
+
+  /* ---------- SPEAKER COVERAGE CALCULATOR ---------- */
+  // Diameter = 2 x net throw x tan(angle / 2) x variance factor.
+  // Factors calibrated to the original tool at 10.5 ft / 6.0 ft / 120 deg:
+  //   strict 5.5 ft / 23 sq ft, +/-3 dB 15.6 ft / 191 sq ft,
+  //   +/-6 dB 22.6 ft / 401 sq ft, +/-12 dB 32.7 ft / 842 sq ft.
+  const COVERAGE_FACTORS = { 'none': 0.35, '3': 1.00, '6': 1.45, '12': 2.10 };
+
+  function fmtFt(n) { return n.toFixed(1) + ' ft'; }
+
+  function drawCoverage(mount, ear, disp, net, diameter) {
+    const W = 640, H = 340, FLOOR = 300, S = 7, cx = 320;
+    const ceilY = FLOOR - mount * S;
+    const earY = FLOOR - ear * S;
+    const f = n => n.toFixed(1);
+    let g = '';
+
+    g += `<rect width="${W}" height="${H}" fill="#0a1119"/>`;
+    [10, 20, 30, 40].forEach(ft => {
+      const y = FLOOR - ft * S;
+      g += `<line x1="0" x2="${W}" y1="${f(y)}" y2="${f(y)}" stroke="#223040" stroke-dasharray="4 5"/>`;
+    });
+    g += `<line x1="0" x2="${W}" y1="${FLOOR}" y2="${FLOOR}" stroke="#3b4a5c" stroke-width="2"/>`;
+
+    // Ceiling and ear-level lines
+    g += `<line x1="0" x2="${W}" y1="${f(ceilY)}" y2="${f(ceilY)}" stroke="#5a6a7d" stroke-width="2"/>`;
+    g += `<text x="14" y="${f(ceilY - 8)}" fill="#8a97a8" font-size="11" font-family="monospace">Ceiling Height (${fmtFt(mount)})</text>`;
+    g += `<line x1="0" x2="${W}" y1="${f(earY)}" y2="${f(earY)}" stroke="#4b5b6e" stroke-dasharray="4 4"/>`;
+    g += `<text x="14" y="${f(earY + 16)}" fill="#8a97a8" font-size="11" font-family="monospace">Ear Level (${fmtFt(ear)})</text>`;
+
+    if (net > 0 && diameter > 0) {
+      const r = (diameter / 2) * S;
+      const tp = net * S;
+
+      // Cone and footprint
+      g += `<polygon points="${cx},${f(ceilY)} ${f(cx - r)},${f(earY)} ${f(cx + r)},${f(earY)}" fill="rgba(52,211,153,0.16)" stroke="rgba(52,211,153,0.45)"/>`;
+      g += `<line x1="${f(cx - r)}" x2="${f(cx + r)}" y1="${f(earY)}" y2="${f(earY)}" stroke="#34d399" stroke-width="3"/>`;
+      g += `<circle cx="${f(cx - r)}" cy="${f(earY)}" r="5" fill="#34d399"/>`;
+      g += `<circle cx="${f(cx + r)}" cy="${f(earY)}" r="5" fill="#34d399"/>`;
+
+      // Angle arcs at the speaker
+      const a = Math.atan2(r, tp);
+      [18, 26].forEach(rad => {
+        const x1 = cx - rad * Math.sin(a), y1 = ceilY + rad * Math.cos(a);
+        const x2 = cx + rad * Math.sin(a);
+        g += `<path d="M ${f(x1)} ${f(y1)} A ${rad} ${rad} 0 0 0 ${f(x2)} ${f(y1)}" fill="none" stroke="rgba(147,197,253,0.7)"/>`;
+      });
+      g += `<text x="${cx}" y="${f(earY - 8)}" text-anchor="middle" fill="#cfe3ff" font-size="13" font-family="monospace">${disp}° Cone</text>`;
+
+      // Net throw dimension
+      const ax = cx - 52, midY = (ceilY + earY) / 2;
+      g += `<line x1="${ax}" x2="${ax}" y1="${f(ceilY + 6)}" y2="${f(earY - 6)}" stroke="#93c5fd"/>`;
+      g += `<polygon points="${ax},${f(ceilY)} ${ax - 4},${f(ceilY + 8)} ${ax + 4},${f(ceilY + 8)}" fill="#93c5fd"/>`;
+      g += `<polygon points="${ax},${f(earY)} ${ax - 4},${f(earY - 8)} ${ax + 4},${f(earY - 8)}" fill="#93c5fd"/>`;
+      g += `<rect x="${ax - 62}" y="${f(midY - 10)}" width="54" height="20" rx="3" fill="#13202e" stroke="#2c4a6b"/>`;
+      g += `<text x="${ax - 35}" y="${f(midY + 4)}" text-anchor="middle" fill="#93c5fd" font-size="12" font-family="monospace">${fmtFt(net)}</text>`;
+
+      // Diameter pill
+      g += `<rect x="${cx - 52}" y="${f(earY + 24)}" width="104" height="26" rx="13" fill="rgba(16,185,129,0.2)" stroke="#34d399"/>`;
+      g += `<text x="${cx}" y="${f(earY + 41)}" text-anchor="middle" fill="#d1fae5" font-size="13" font-weight="bold" font-family="monospace">Ø ${fmtFt(diameter)}</text>`;
+    }
+
+    // Speaker icon
+    g += `<polygon points="${cx - 13},${f(ceilY - 13)} ${cx + 13},${f(ceilY - 13)} ${cx + 6},${f(ceilY)} ${cx - 6},${f(ceilY)}" fill="#7b8794"/>`;
+    g += `<circle cx="${cx}" cy="${f(ceilY)}" r="3.5" fill="#93c5fd"/>`;
+
+    document.getElementById('coverageSvg').innerHTML = g;
+  }
+
+  function calculateCoverage() {
+    const mount = parseFloat(document.getElementById('mountHeight').value) || 0;
+    const ear = parseFloat(document.getElementById('listenerHeight').value) || 0;
+    const disp = parseFloat(document.getElementById('dispersion').value) || 0;
+    const variance = document.getElementById('variance').value;
+
+    document.getElementById('mountVal').textContent = fmtFt(mount);
+    document.getElementById('listenerVal').textContent = fmtFt(ear);
+    document.getElementById('dispersionVal').textContent = disp + '°';
+
+    const net = mount - ear;
+    const warn = document.getElementById('coverageWarn');
+    let diameter = 0, area = 0;
+
+    if (net > 0 && disp > 0 && disp < 180) {
+      diameter = 2 * net * Math.tan((disp / 2) * (Math.PI / 180)) * COVERAGE_FACTORS[variance];
+      area = Math.PI * Math.pow(diameter / 2, 2);
+      warn.style.display = 'none';
+    } else {
+      warn.textContent = 'Speaker height must be above listener ear height.';
+      warn.style.display = 'block';
+    }
+
+    document.getElementById('statDiameter').textContent = fmtFt(diameter);
+    document.getElementById('statArea').textContent = Math.round(area).toLocaleString() + ' sq ft';
+    document.getElementById('statThrow').textContent = fmtFt(net);
+
+    drawCoverage(mount, ear, disp, net, diameter);
+  }
+
+  ['mountHeight', 'listenerHeight', 'dispersion'].forEach(id =>
+    document.getElementById(id).addEventListener('input', calculateCoverage));
+  document.getElementById('variance').addEventListener('change', calculateCoverage);
+  calculateCoverage();
 
   /* ---------- CONDUIT FILL CALCULATOR ---------- */
   // Wire presets — nominal outer diameter in inches (approximate, verify against spec sheets)
